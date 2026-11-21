@@ -1,16 +1,18 @@
-"Nicolf Delgado Bautista"
+"""
+Sistema Integral de Gestión de Clientes, Servicios y Reservas - Software FJ
+Componente Práctico Fase 4 - Programación (213023) - UNAD
+Autora: Nicolf Delgado Bautista
 "codigo_213023"
 "grupo_225"
-"componente practico-fase 3"
-"modelos"
-"excepcione primer modulo"
-"codigo:"
-
-"MODULO 1 EXECEPCIONES"
-excepciones personalizadas para el sistema de gestión Software FJ.
-Permitira diferenciar errores de negocio, validación y estado sin detener la aplicación.
 """
+import logging
+from abc import ABC, abstractmethod
+from typing import List, Optional
 
+
+# ==============================================================================
+# 1. JERARQUÍA DE EXCEPCIONES PERSONALIZADAS
+# ==============================================================================
 class SoftwareFJError(Exception):
     """Excepción base para todos los errores controlados del sistema."""
     pass
@@ -20,11 +22,11 @@ class DatoInvalidoError(SoftwareFJError):
     pass
 
 class ServicioNoDisponibleError(SoftwareFJError):
-    """Se lanza al intentar reservar un servicio inactivo o sin stock."""
+    """Se lanza al intentar reservar un servicio inactivo o sin disponibilidad."""
     pass
 
 class ReservaInvalidaError(SoftwareFJError):
-    """Se lanza ante operaciones no permitidas sobre una reserva (ej. cancelar una ya cancelada)."""
+    """Se lanza ante operaciones no permitidas sobre una reserva."""
     pass
 
 class CalculoInconsistenteError(SoftwareFJError):
@@ -32,21 +34,14 @@ class CalculoInconsistenteError(SoftwareFJError):
     pass
 
 
-
-
-
-"MODULO2 REGISTRADORA"
-"""
-gestiona el registro de eventos y errores en un archivo de texto.
-"""
-import logging
-
+# ==============================================================================
+# 2. CONFIGURACIÓN DEL ARCHIVO DE LOGS
+# ==============================================================================
 def configurar_logger(nombre_archivo: str = "sistema_fj.log") -> logging.Logger:
-    """Inicializa y retorna un logger configurado para escribir en archivo."""
+    """Inicializa y retorna un logger configurado para escribir eventos y errores."""
     logger = logging.getLogger("SoftwareFJ")
     logger.setLevel(logging.DEBUG)
 
-    # Evitar duplicar handlers si se llama varias veces
     if not logger.handlers:
         manejador_archivo = logging.FileHandler(nombre_archivo, mode="a", encoding="utf-8")
         formato = logging.Formatter(
@@ -59,22 +54,9 @@ def configurar_logger(nombre_archivo: str = "sistema_fj.log") -> logging.Logger:
     return logger
 
 
-"MODULO 3 MODELOS"
-
-
-"""
-modelos orientados a objetos para Software FJ.
-Implementamos abstracción, herencia, encapsulación, polimorfismo y sobrecarga simulada.
-"""
-from abc import ABC, abstractmethod
-from typing import Optional
-from exceptions import (
-    DatoInvalidoError,
-    ServicioNoDisponibleError,
-    ReservaInvalidaError,
-    CalculoInconsistenteError
-)
-
+# ==============================================================================
+# 3. MODELOS ORIENTADOS A OBJETOS (ABSTRACCIÓN, HERENCIA, POLIMORFISMO)
+# ==============================================================================
 class EntidadSistema(ABC):
     """Clase abstracta base para todas las entidades del sistema."""
 
@@ -332,20 +314,11 @@ class Reserva(EntidadSistema):
         )
 
 
-"MODULO 4 GESTOR"
-
-
-"""
-gestor que centraliza las listas internas de clientes, servicios y reservas
-sin utilizar bases de datos, asegurando continuidad operativa ante errores.
-"""
-from typing import List, Optional
-from models import Cliente, Servicio, Reserva
-from exceptions import SoftwareFJError, DatoInvalidoError, ReservaInvalidaError
-from logger_config import configurar_logger
-
+# ==============================================================================
+# 4. GESTOR DEL SISTEMA (LISTAS EN MEMORIA Y MANEJO AVANZADO DE EXCEPCIONES)
+# ==============================================================================
 class GestorSoftwareFJ:
-    """Controlador principal del sistema."""
+    """Controlador principal del sistema sin uso de bases de datos."""
 
     def __init__(self):
         self._clientes: List[Cliente] = []
@@ -411,7 +384,6 @@ class GestorSoftwareFJ:
             reserva.procesar_y_confirmar(descuento=descuento, recargo_fijo=recargo_fijo)
 
         except SoftwareFJError as err:
-            # Captura errores de dominio y registra la causa encadenada si existe
             causa = f" | Causa interna: {err.__cause__}" if err.__cause__ else ""
             self._logger.error(f"Fallo en reserva [{id_reserva}]: {err}{causa}")
             print(f"[ERROR RESERVA {id_reserva}] {err}{causa}")
@@ -440,113 +412,70 @@ class GestorSoftwareFJ:
             print(f"[OK] Reserva {id_reserva} cancelada y servicio liberado.")
 
 
+# ==============================================================================
+# 5. SIMULACIÓN DE OPERACIONES (PRUEBAS DE CONTINUIDAD OPERATIVA)
+# ==============================================================================
+def ejecutar_simulacion():
+    logger = configurar_logger()
+    sistema = GestorSoftwareFJ()
+    print("=== INICIANDO SIMULACIÓN DE OPERACIONES - SOFTWARE FJ ===\n")
 
-"MODULO 5 MAIN"
-"""
-gestor que centraliza las listas internas de clientes, servicios y reservas
-sin utilizar bases de datos, asegurando continuidad operativa ante errores.
-"""
-from typing import List, Optional
-from models import Cliente, Servicio, Reserva
-from exceptions import SoftwareFJError, DatoInvalidoError, ReservaInvalidaError
-from logger_config import configurar_logger
+    # 1. Registro válido de Cliente 1
+    c1 = Cliente("CLI-01", "Laura Martínez", "laura.m@empresa.com", "3104567890")
+    sistema.registrar_cliente(c1)
 
-class GestorSoftwareFJ:
-    """Controlador principal del sistema."""
+    # 2. Registro válido de Cliente 2
+    c2 = Cliente("CLI-02", "Carlos Gómez", "cgomez@tech.co", "3209876543")
+    sistema.registrar_cliente(c2)
 
-    def __init__(self):
-        self._clientes: List[Cliente] = []
-        self._servicios: List[Servicio] = []
-        self._reservas: List[Reserva] = []
-        self._logger = configurar_logger()
-        self._logger.info("=== INICIO DE SESIÓN DEL SISTEMA SOFTWARE FJ ===")
+    # 3. Intento inválido de creación de Cliente (correo sin dominio y teléfono corto)
+    try:
+        c_invalido = Cliente("CLI-03", "Ana", "correo_sin_arroba", "123")
+        sistema.registrar_cliente(c_invalido)
+    except SoftwareFJError as e:
+        logger.error(f"Operación 3 fallida (Validación Cliente): {e}")
+        print(f"[ERROR CAPTURADO EN MAIN] {e}")
 
-    def registrar_cliente(self, cliente: Cliente) -> bool:
-        """Registra un cliente validando duplicados con bloque try/except/else."""
-        try:
-            if any(c.id == cliente.id for c in self._clientes):
-                raise DatoInvalidoError(f"Ya existe un cliente registrado con el ID '{cliente.id}'.")
-        except SoftwareFJError as e:
-            self._logger.error(f"Error al registrar cliente: {e}")
-            print(f"[ERROR CONTROLADO] {e}")
-            return False
-        else:
-            self._clientes.append(cliente)
-            self._logger.info(f"Cliente registrado exitosamente -> {cliente.obtener_resumen()}")
-            print(f"[OK] {cliente.obtener_resumen()}")
-            return True
+    # 4. Creación válida de Servicio 1: Sala de Juntas
+    s1 = ReservaSala("SRV-01", "Sala Innovación", tarifa_hora=80000, capacidad=12)
+    sistema.agregar_servicio(s1)
 
-    def agregar_servicio(self, servicio: Servicio) -> bool:
-        """Agrega un servicio al catálogo en memoria."""
-        try:
-            if any(s.id == servicio.id for s in self._servicios):
-                raise DatoInvalidoError(f"Ya existe un servicio con el ID '{servicio.id}'.")
-        except SoftwareFJError as e:
-            self._logger.error(f"Error al agregar servicio: {e}")
-            print(f"[ERROR CONTROLADO] {e}")
-            return False
-        else:
-            self._servicios.append(servicio)
-            self._logger.info(f"Servicio agregado -> {servicio.obtener_resumen()}")
-            print(f"[OK] {servicio.obtener_resumen()}")
-            return True
+    # 5. Creación válida de Servicio 2: Alquiler de Equipo
+    s2 = AlquilerEquipo("SRV-02", "Workstation Dell Precision", tarifa_dia=120000, serial="SN-998877")
+    sistema.agregar_servicio(s2)
 
-    def crear_reserva(
-        self,
-        id_reserva: str,
-        id_cliente: str,
-        id_servicio: str,
-        duracion: int,
-        descuento: float = 0.0,
-        recargo_fijo: Optional[float] = None
-    ) -> Optional[Reserva]:
-        """
-        Procesa una reserva completa utilizando try/except/else/finally
-        y encadenamiento de excepciones ante fallos de búsqueda o procesamiento.
-        """
-        reserva_creada = None
-        try:
-            cliente = next((c for c in self._clientes if c.id == id_cliente), None)
-            if cliente is None:
-                raise DatoInvalidoError(f"Cliente con ID '{id_cliente}' no encontrado.")
+    # 6. Creación válida de Servicio 3: Asesoría Especializada
+    s3 = AsesoriaEspecializada("SRV-03", "Auditoría Arquitectura Cloud", tarifa_hora=150000, especialidad="Cloud & DevOps")
+    sistema.agregar_servicio(s3)
 
-            servicio = next((s for s in self._servicios if s.id == id_servicio), None)
-            if servicio is None:
-                raise DatoInvalidoError(f"Servicio con ID '{id_servicio}' no encontrado.")
+    # 7. Intento inválido de creación de Servicio (tarifa negativa)
+    try:
+        s_invalido = ReservaSala("SRV-04", "Sala Fantasma", tarifa_hora=-50000, capacidad=5)
+        sistema.agregar_servicio(s_invalido)
+    except SoftwareFJError as e:
+        logger.error(f"Operación 7 fallida (Validación Servicio): {e}")
+        print(f"[ERROR CAPTURADO EN MAIN] {e}")
 
-            reserva = Reserva(id_reserva, cliente, servicio, duracion)
-            reserva.procesar_y_confirmar(descuento=descuento, recargo_fijo=recargo_fijo)
+    # 8. Reserva exitosa 1: Sala por 5 horas (aplica tarifa preferencial > 4h + 10% descuento)
+    sistema.crear_reserva("RES-01", "CLI-01", "SRV-01", duracion=5, descuento=0.10)
 
-        except SoftwareFJError as err:
-            # Captura errores de dominio y registra la causa encadenada si existe
-            causa = f" | Causa interna: {err.__cause__}" if err.__cause__ else ""
-            self._logger.error(f"Fallo en reserva [{id_reserva}]: {err}{causa}")
-            print(f"[ERROR RESERVA {id_reserva}] {err}{causa}")
-        else:
-            self._reservas.append(reserva)
-            reserva_creada = reserva
-            self._logger.info(f"Reserva confirmada -> {reserva.obtener_resumen()}")
-            print(f"[OK] {reserva.obtener_resumen()}")
-        finally:
-            self._logger.debug(f"Finalizó intento de transacción para reserva '{id_reserva}'.")
+    # 9. Reserva fallida 2: Intentar reservar la misma sala que ya quedó ocupada
+    sistema.crear_reserva("RES-02", "CLI-02", "SRV-01", duracion=2)
 
-        return reserva_creada
+    # 10. Reserva fallida 3: Asesoría con duración menor al mínimo permitido (1h < 2h)
+    sistema.crear_reserva("RES-03", "CLI-02", "SRV-03", duracion=1)
 
-    def cancelar_reserva(self, id_reserva: str) -> None:
-        """Cancela una reserva existente de forma segura."""
-        try:
-            reserva = next((r for r in self._reservas if r.id == id_reserva), None)
-            if reserva is None:
-                raise ReservaInvalidaError(f"No existe la reserva '{id_reserva}'.")
-            reserva.cancelar()
-        except SoftwareFJError as e:
-            self._logger.warning(f"No se pudo cancelar reserva '{id_reserva}': {e}")
-            print(f"[ADVERTENCIA] {e}")
-        else:
-            self._logger.info(f"Reserva cancelada -> {reserva.obtener_resumen()}")
-            print(f"[OK] Reserva {id_reserva} cancelada y servicio liberado.")
+    # 11. Reserva fallida 4: Encadenamiento de excepción por descuento fuera de rango (150%)
+    sistema.crear_reserva("RES-04", "CLI-02", "SRV-02", duracion=3, descuento=1.5)
 
+    # 12. Reserva exitosa 5 y posterior cancelación controlada
+    sistema.crear_reserva("RES-05", "CLI-02", "SRV-02", duracion=4, recargo_fijo=20000)
+    sistema.cancelar_reserva("RES-05")
+    # Intento de doble cancelación para probar estabilidad
+    sistema.cancelar_reserva("RES-05")
 
+    print("\n=== SIMULACIÓN FINALIZADA SIN INTERRUPCIONES ===")
+    print("Revise el archivo 'sistema_fj.log' para verificar la auditoría completa de eventos y errores.")
 
-
-"FIN"
+if __name__ == "__main__":
+    ejecutar_simulacion()
